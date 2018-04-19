@@ -14,8 +14,27 @@
 +----------------------------------------------------------------------+
 */
 
-#ifndef PHP_SEASLOG_H
-#define PHP_SEASLOG_H
+/* $Id$ */
+
+#ifndef _PHP_SEASLOG_H_
+#define _PHP_SEASLOG_H_
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include "include/SeasLog.h"
+
+#ifdef PHP_WIN32
+#include "win32/time.h"
+#include <windows.h>
+#elif defined(NETWARE)
+#include <sys/timeval.h>
+#include <sys/time.h>
+#else
+#include <unistd.h>
+#include <sys/time.h>
+#endif
 
 extern zend_module_entry seaslog_module_entry;
 #define phpext_seaslog_ptr &seaslog_module_entry
@@ -30,52 +49,10 @@ extern zend_module_entry seaslog_module_entry;
 
 #ifdef ZTS
 #include "TSRM.h"
-#endif
-
-#ifdef ZTS
 #define SEASLOG_G(v) TSRMG(seaslog_globals_id, zend_seaslog_globals *, v)
 #else
 #define SEASLOG_G(v) (seaslog_globals.v)
 #endif
-
-#define SEASLOG_RES_NAME                    "SeasLog"
-#define SEASLOG_VERSION                     "1.6.8"
-#define SEASLOG_AUTHOR                      "Chitao.Gao  [ neeke@php.net ]"
-
-#define SEASLOG_ALL                         "all"
-#define SEASLOG_DEBUG                       "debug"
-#define SEASLOG_INFO                        "info"
-#define SEASLOG_NOTICE                      "notice"
-#define SEASLOG_WARNING                     "warning"
-#define SEASLOG_ERROR                       "error"
-#define SEASLOG_CRITICAL                    "critical"
-#define SEASLOG_ALERT                       "alert"
-#define SEASLOG_EMERGENCY                   "emergency"
-
-#define SEASLOG_APPENDER_FILE               1
-#define SEASLOG_APPENDER_TCP                2
-#define SEASLOG_APPENDER_UDP                3
-
-#define SEASLOG_DETAIL_ORDER_ASC            1
-#define SEASLOG_DETAIL_ORDER_DESC           2
-
-#define SEASLOG_EVENT_ERROR                 1
-#define SEASLOG_EVENT_EXCEPTION             2
-
-#define SEASLOG_DIR_MODE                    0755
-#define SEASLOG_FILE_MODE                   0666
-
-#define SEASLOG_BUFFER_RE_INIT_YES          1
-#define SEASLOG_BUFFER_RE_INIT_NO           2
-
-#define SEASLOG_PROCESS_LOGGER_LAST         1
-#define SEASLOG_PROCESS_LOGGER_TMP          2
-
-#define SL_S(s)                             s, sizeof(s) - 1
-
-#define SEASLOG_HASH_VALUE_LOGGER           1
-#define SEASLOG_HASH_VALUE_PATH             2
-#define SEASLOG_HASH_VALUE_ACCESS           3
 
 #ifndef E_EXCEPTION
 # define E_EXCEPTION (1<<15L)
@@ -95,6 +72,8 @@ PHP_METHOD(SEASLOG_RES_NAME, __construct);
 PHP_METHOD(SEASLOG_RES_NAME, __destruct);
 PHP_METHOD(SEASLOG_RES_NAME, setBasePath);
 PHP_METHOD(SEASLOG_RES_NAME, getBasePath);
+PHP_METHOD(SEASLOG_RES_NAME, setRequestID);
+PHP_METHOD(SEASLOG_RES_NAME, getRequestID);
 PHP_METHOD(SEASLOG_RES_NAME, setLogger);
 PHP_METHOD(SEASLOG_RES_NAME, getLastLogger);
 PHP_METHOD(SEASLOG_RES_NAME, setDatetimeFormat);
@@ -102,6 +81,7 @@ PHP_METHOD(SEASLOG_RES_NAME, getDatetimeFormat);
 PHP_METHOD(SEASLOG_RES_NAME, analyzerCount);
 PHP_METHOD(SEASLOG_RES_NAME, analyzerDetail);
 PHP_METHOD(SEASLOG_RES_NAME, getBuffer);
+PHP_METHOD(SEASLOG_RES_NAME, getBufferEnabled);
 PHP_METHOD(SEASLOG_RES_NAME, flushBuffer);
 PHP_METHOD(SEASLOG_RES_NAME, log);
 PHP_METHOD(SEASLOG_RES_NAME, debug);
@@ -113,45 +93,6 @@ PHP_METHOD(SEASLOG_RES_NAME, critical);
 PHP_METHOD(SEASLOG_RES_NAME, alert);
 PHP_METHOD(SEASLOG_RES_NAME, emergency);
 
-#if PHP_VERSION_ID >= 70000
-
-#define EX_ARRAY_DESTROY(arr) \
-	do { \
-		zval_ptr_dtor(arr); \
-		ZVAL_UNDEF(arr); \
-	} while(0)
-
-#else
-
-#define EX_ARRAY_DESTROY(arr) \
-	do { \
-		zval_ptr_dtor(arr);\
-	} while(0)
-
-#endif
-
-typedef struct _logger_entry_t
-{
-    ulong logger_hash;
-    char *logger;
-    int logger_len;
-    char *logger_path;
-    int logger_path_len;
-    int access;
-} logger_entry_t;
-
-typedef struct _last_sec_entry_t
-{
-    int  sec;
-    char *real_time;
-} last_sec_entry_t;
-
-typedef struct _last_min_entry_t
-{
-    int  sec;
-    char *real_time;
-} last_min_entry_t;
-
 ZEND_BEGIN_MODULE_GLOBALS(seaslog)
     char *default_basepath;
     char *default_logger;
@@ -159,36 +100,71 @@ ZEND_BEGIN_MODULE_GLOBALS(seaslog)
     char *current_datetime_format;
     int  current_datetime_format_len;
     char *base_path;
+
     char *host_name;
+    int  host_name_len;
+
+	char *request_id;
+	int  request_id_len;
+
+	char *process_id;
+    int  process_id_len;
+
+    char *default_template;
+    char *current_template;
+    char *slash_or_underline;
 
     logger_entry_t *tmp_logger;
     logger_entry_t *last_logger;
     last_sec_entry_t *last_sec;
     last_min_entry_t *last_min;
 
+    zend_bool disting_folder;
     zend_bool disting_type;
     zend_bool disting_by_hour;
     zend_bool use_buffer;
+    zend_bool buffer_disabled_in_cli;
+    zend_bool enable_buffer_real;
+    zend_bool trim_wrap;
+    zend_bool throw_exception;
+    zend_bool ignore_warning;
+
+    zend_bool trace_notice;
+    zend_bool trace_warning;
     zend_bool trace_error;
     zend_bool trace_exception;
 
     int buffer_size;
     int level;
     int buffer_count;
+    int initRComplete;
+    int error_loop;
+    int recall_depth;
 
     int appender;
+    int appender_retry;
     char *remote_host;
     int remote_port;
+    int remote_timeout;
+    struct timeval remote_timeout_real;
+
+    request_variable_t *request_variable;
+
+    int in_error;
+    char *in_error_filename;
+    long in_error_lineno;
 
 #if PHP_VERSION_ID >= 70000
     zval buffer;
     zval logger_list;
+    zval stream_list;
 #else
     zval *buffer;
     zval *logger_list;
+    zval *stream_list;
 #endif
 
 ZEND_END_MODULE_GLOBALS(seaslog)
 
-#endif /* PHP_SEASLOG_H */
+#endif /* _PHP_SEASLOG_H_ */
 

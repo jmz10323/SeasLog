@@ -15,7 +15,7 @@ class pcntl extends analyzerBase
      * 是否等待进程结束
      * @var bool
      */
-    static private $waitFlag = FALSE;
+    static private $waitFlag = false;
 
     static public function setWait($bool)
     {
@@ -35,36 +35,41 @@ class pcntl extends analyzerBase
         $_analyz_count = count($_analyz);
 
         //只有一个线程时，作一个批次
-        if (self::$forkCount < 2) {
-            self::$forkCount = 1;
+        if (self::$forkCount <= config::PCNTL_FORK_COUNT_MIN) {
+            self::$forkCount = config::PCNTL_FORK_COUNT_MIN;
+
             return array($_analyz);
         }
 
         //线程数大于配置数，每个配置一个线程
         if ($_analyz_count <= self::$forkCount) {
             self::$forkCount = $_analyz_count;
-            return array_chunk($_analyz, $_analyz_count, TRUE);
+
+            return array_chunk($_analyz, 1, true);
         }
 
         //平均分配置到线程数，最后一个线程分得最多个
         $_mod = $_analyz_count % self::$forkCount;
         if ($_mod == 0) {
-            return array_chunk($_analyz, self::$forkCount, TRUE);
+            return array_chunk($_analyz, self::$forkCount, true);
         } else {
             $_batchSlice = floor($_analyz_count / self::$forkCount);
 
             $array_pop = array_slice($_analyz, 0 - $_mod);
             $_analyz   = array_diff_key($_analyz, $array_pop);
 
-            $_batchArray = array_chunk($_analyz, $_batchSlice, TRUE);
+            $_batchArray = array_chunk($_analyz, $_batchSlice, true);
             array_push($_batchArray, array_merge(array_pop($_batchArray), $array_pop));
+
             return $_batchArray;
         }
     }
 
     static public function run()
     {
-        if (!function_exists('pcntl_fork')) throw new \Exception('pcntl ext not exists');
+        if (!function_exists('pcntl_fork')) {
+            throw new \Exception('pcntl ext not exists');
+        }
 
         $batchArray = self::getBatchArray();
 
@@ -81,6 +86,8 @@ class pcntl extends analyzerBase
                         self::analyzerRun($rName, $config);
                     }
                 }
+
+                \SeasLog::info('Children Process Done.', array(), 'SeasLogAnalyzer');
                 exit(0);
             }
 
@@ -89,6 +96,8 @@ class pcntl extends analyzerBase
                 echo "wait $i -> " . time() . "\n";
             }
         }
+
+        \SeasLog::info('Master Process Done. And Children Process ids => {MyPids}', array('{MyPids}' => json_encode($pids)), 'SeasLogAnalyzer');
     }
 }
 

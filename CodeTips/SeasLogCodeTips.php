@@ -4,6 +4,18 @@
  * Date: 14-1-27 下午4:47
  */
 
+define('SEASLOG_ALL', 'ALL');
+define('SEASLOG_DEBUG', 'DEBUG');
+define('SEASLOG_INFO', 'INFO');
+define('SEASLOG_NOTICE', 'NOTICE');
+define('SEASLOG_WARNING', 'WARNING');
+define('SEASLOG_ERROR', 'ERROR');
+define('SEASLOG_CRITICAL', 'CRITICAL');
+define('SEASLOG_ALERT', 'ALERT');
+define('SEASLOG_EMERGENCY', 'EMERGENCY');
+define('SEASLOG_DETAIL_ORDER_ASC', 1);
+define('SEASLOG_DETAIL_ORDER_DESC', 2);
+
 class SeasLog
 {
     public function __construct()
@@ -25,7 +37,7 @@ class SeasLog
      */
     static public function setBasePath($basePath)
     {
-        return TRUE;
+        return true;
     }
 
     /**
@@ -39,14 +51,36 @@ class SeasLog
     }
 
     /**
+     * 设置本次请求标识
+     *
+     * @param string
+     *
+     * @return bool
+     */
+    static public function setRequestID($request_id)
+    {
+        return true;
+    }
+
+    /**
+     * 获取本次请求标识
+     * @return string
+     */
+    static public function getRequestID()
+    {
+        return uniqid();
+    }
+
+    /**
      * 设置模块目录
+     *
      * @param $module
      *
      * @return bool
      */
     static public function setLogger($module)
     {
-        return TRUE;
+        return true;
     }
 
     /**
@@ -60,13 +94,14 @@ class SeasLog
 
     /**
      * 设置DatetimeFormat配置
+     *
      * @param $format
      *
      * @return bool
      */
     static public function setDatetimeFormat($format)
     {
-        return TRUE;
+        return true;
     }
 
     /**
@@ -80,13 +115,14 @@ class SeasLog
 
     /**
      * 统计所有类型（或单个类型）行数
+     *
      * @param string $level
      * @param string $log_path
      * @param null   $key_word
      *
      * @return array | long
      */
-    static public function analyzerCount($level = 'all', $log_path = '*', $key_word = NULL)
+    static public function analyzerCount($level = 'all', $log_path = '*', $key_word = null)
     {
         return array();
     }
@@ -103,7 +139,7 @@ class SeasLog
      *
      * @return array
      */
-    static public function analyzerDetail($level = SEASLOG_INFO, $log_path = '*', $key_word = NULL, $start = 1, $limit = 20, $order = SEASLOG_DETIAL_ORDER_ASC)
+    static public function analyzerDetail($level = SEASLOG_INFO, $log_path = '*', $key_word = null, $start = 1, $limit = 20, $order = SEASLOG_DETAIL_ORDER_ASC)
     {
         return array();
     }
@@ -125,7 +161,7 @@ class SeasLog
      */
     static public function flushBuffer()
     {
-        return TRUE;
+        return true;
     }
 
     /**
@@ -226,6 +262,7 @@ class SeasLog
 
     /**
      * 通用日志方法
+     *
      * @param        $level
      * @param        $message
      * @param array  $content
@@ -236,3 +273,4 @@ class SeasLog
 
     }
 }
+
